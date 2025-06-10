@@ -30,7 +30,6 @@ public class OneWaregnuCompilerModule : IModule
 
     public void OnInitialized(IContainerProvider containerProvider)
     {
-        //ContainerLocator.Container.Resolve<IEnvironmentService>().SetPath("CC_yosys", yosys);
         addPackageBinaries(containerProvider);
         editUISettings(containerProvider);
         transferContainerProvider(containerProvider);
@@ -38,7 +37,6 @@ public class OneWaregnuCompilerModule : IModule
         
 
         var toolchainService = containerProvider.Resolve<IToolchainService>();
-        //containerProvider.Resolve<IDockService>().RegisterLayoutExtension<gccFrontendViewModel>(DockShowLocation.Document);
         var windowService = containerProvider.Resolve<IWindowService>();
        
         //gccFrontendViewModel vm = new gccFrontendViewModel(); 
@@ -52,12 +50,11 @@ public class OneWaregnuCompilerModule : IModule
                 
                 menuItems.Add(new MenuItemViewModel("")
                 {
-                    //Header = "Cross-Compile Menue",
-                    //Command = new RelayCommand(() => toolchainService.Test()) 
+
                 });
             }
         });
-         //(typeof(IProjectFile),Instance: x)
+        
         windowService.RegisterUiExtension("MainWindow_RoundToolBarExtension", new UiExtension(x =>
         {
             if (x is IProjectFile {Extension: ".c"} or IProjectFile {Extension: ".cpp"})

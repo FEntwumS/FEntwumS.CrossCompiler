@@ -67,16 +67,19 @@ public class ToolchainService : IToolchainService
                 if (!check) return check;
                 check = await doELFFileFromObjectFiles();
                 if (!check) return check;
-                check = await doAssemblyListingFromELFFile();
-                if (!check) return check;
-                check = await doMainBinaryFromELFFile();
-                if (!check) return check;
-                check = await generateNeoRVBinaryImage();
-                if (!check) return check;
-                check = await generateNeoRVVhdImage();
-                if (!check) return check;
-                check = await generateNeoRVHexImage();
-                if (!check) return check;
+                if (!debugCheck)
+                {
+                    check = await doAssemblyListingFromELFFile();
+                    if (!check) return check;
+                    check = await doMainBinaryFromELFFile();
+                    if (!check) return check;
+                    check = await generateNeoRVBinaryImage();
+                    if (!check) return check;
+                    check = await generateNeoRVVhdImage();
+                    if (!check) return check;
+                    check = await generateNeoRVHexImage();
+                    if (!check) return check;
+                }
                 cleanup();
                 return check;
             default: return check;

@@ -17,7 +17,7 @@
         <None Include="../../License.md" Pack="true" PackagePath=""/>
     </ItemGroup>
     <ItemGroup>
-        <PackageReference Include="OneWare.Essentials" Version="0.11.3" Private="false" ExcludeAssets="runtime;Native"/>
+        <PackageReference Include="OneWare.Essentials" Version="0.11.4" Private="false" ExcludeAssets="runtime;Native"/>
     </ItemGroup>
 
     <Target Name="GenerateCompatibilityFile" AfterTargets="Build">
