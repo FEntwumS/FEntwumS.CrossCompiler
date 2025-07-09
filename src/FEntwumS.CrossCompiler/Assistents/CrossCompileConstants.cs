@@ -2,7 +2,7 @@ using OneWare.Essentials.Converters;
 
 namespace FEntwumS.CrossCompiler.Assistents;
 
-public class Constants
+public class CrossCompileConstants
 {
     public static string pathSettingKey = "CrossCompilePathSetting";
     public static string toolchainRootDirectory = "xpack-riscv-none-elf-gcc-14.2.0-3";

@@ -5,10 +5,10 @@ using FEntwumS.CrossCompiler.ViewModel;
 
 namespace FEntwumS.CrossCompiler.View
 {
-    public partial class gccFrontendView : UserControl
+    public partial class CrossCompileViewModel : UserControl
     {
         
-        public gccFrontendView() 
+        public CrossCompileViewModel() 
         {
             InitializeComponent();
         }
@@ -18,23 +18,23 @@ namespace FEntwumS.CrossCompiler.View
             (DataContext as gccFrontendViewModel)?.Detach();
             base.OnDetachedFromVisualTree(e);
         }
-        */
+        
 
         private void newSelectionForTargetSystem(object? sender, SelectionChangedEventArgs e)
         {
             if (!targetSystem.SelectionBoxItem.Equals(null))
             {
-                (DataContext as gccFrontendViewModel).viewTargetSystem = targetSystem.SelectionBoxItem.ToString();
+                (DataContext as ViewModel.CrossCompileViewModel).viewTargetSystem = targetSystem.SelectionBoxItem.ToString();
             }
             
-        }
+        }*/
 
         private void clickCrossCompiling(object? sender, RoutedEventArgs e)
         {
             if (DebugBox.IsChecked.GetValueOrDefault() || UploadBox.IsChecked.GetValueOrDefault())
             {
                 Compiling.Flyout.Hide();
-                (DataContext as gccFrontendViewModel).DoCrossCompiling.Execute(null);
+                (DataContext as ViewModel.CrossCompileViewModel).DoCrossCompiling.Execute(null);
             }
             else
             {
@@ -45,14 +45,14 @@ namespace FEntwumS.CrossCompiler.View
         private void checkedUpload(object? sender, RoutedEventArgs e)
         {
             DebugBox.IsChecked = false;
-            (DataContext as gccFrontendViewModel).debugSelectRoutine((bool)DebugBox.IsChecked);
+            (DataContext as ViewModel.CrossCompileViewModel).debugSelectRoutine((bool)DebugBox.IsChecked);
         }
         
 
         private void checkedDebug(object? sender, RoutedEventArgs e)
         {
             UploadBox.IsChecked = false;
-            (DataContext as gccFrontendViewModel).debugSelectRoutine((bool)DebugBox.IsChecked);
+            (DataContext as ViewModel.CrossCompileViewModel).debugSelectRoutine((bool)DebugBox.IsChecked);
            
         }
     }

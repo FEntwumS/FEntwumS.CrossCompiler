@@ -14,7 +14,7 @@ using Prism.Ioc;
 
 namespace FEntwumS.CrossCompiler.ViewModel;
 
-public class gccFrontendViewModel : ObservableObject
+public class CrossCompileViewModel : ObservableObject
 {
     //Attributes
     public ICommand DoCrossCompiling { get; }
@@ -25,10 +25,9 @@ public class gccFrontendViewModel : ObservableObject
     public bool doUpload;
 
     //Constructor
-    public gccFrontendViewModel()
+    public CrossCompileViewModel()
     {
         toolchainService = TransferredContainerProvider.getService<IToolchainService>();
-        toolchains = new ObservableCollection<object>(toolchainService.returnAvailableToolchains());
         DoCrossCompiling = new AsyncRelayCommand(() => toolchainService.performCrossCompilerToolchain(viewTargetSystem));
     }
 

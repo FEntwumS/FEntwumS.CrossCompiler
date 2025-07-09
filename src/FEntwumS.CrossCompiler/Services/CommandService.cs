@@ -71,7 +71,7 @@ public class CommandService : ICommandService
     public string getToolPath(string toolName)
     {
         string toolPath = String.Empty;
-        settingsService.GetSettingObservable<string>(Constants.pathSettingKey)
+        settingsService.GetSettingObservable<string>(CrossCompileConstants.pathSettingKey)
             .Subscribe(x => toolPath = Path.Combine(x, "bin", toolName)); 
         return toolPath;
     }
@@ -80,9 +80,9 @@ public class CommandService : ICommandService
     {
         string compileOptions = string.Empty;
         List<string> keys = new List<string>();
-        keys.Add(Constants.architectureSettingKey);
-        keys.Add(Constants.abiSettingKey);
-        keys.Add(Constants.optionSettingKey);
+        keys.Add(CrossCompileConstants.architectureSettingKey);
+        keys.Add(CrossCompileConstants.abiSettingKey);
+        keys.Add(CrossCompileConstants.optionSettingKey);
         foreach (var key in keys)
         {
             settingsService.GetSettingObservable<string>(key).Subscribe(x => compileOptions = string.Concat(compileOptions,x," "));  

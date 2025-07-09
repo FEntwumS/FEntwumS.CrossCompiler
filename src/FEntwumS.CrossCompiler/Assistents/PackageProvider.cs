@@ -5,7 +5,7 @@ namespace FEntwumS.CrossCompiler.Services;
 
 public class PackageProvider
 {
-    /*This Attribut reference the connection to the Online-Repository of the required toolchain
+    /*This Attribut references the connection to the Online-Repository of the required toolchain
  for CrossCompiling on NeoRV32.*/
 
     public static readonly Package gccToolchain = new()
@@ -51,8 +51,8 @@ public class PackageProvider
                         [
                             new PackageAutoSetting
                             {
-                                RelativePath = Constants.toolchainRootDirectory,
-                                SettingKey = Constants.pathSettingKey,
+                                RelativePath = CrossCompileConstants.toolchainRootDirectory,
+                                SettingKey = CrossCompileConstants.pathSettingKey,
                             }
                         ]
                        
@@ -66,8 +66,8 @@ public class PackageProvider
                         [
                             new PackageAutoSetting
                             {
-                                RelativePath = Constants.toolchainRootDirectory,
-                                SettingKey = Constants.pathSettingKey,
+                                RelativePath = CrossCompileConstants.toolchainRootDirectory,
+                                SettingKey = CrossCompileConstants.pathSettingKey,
                             }
                         ]
                     },
@@ -80,8 +80,8 @@ public class PackageProvider
                         [
                             new PackageAutoSetting
                             {
-                                RelativePath = Constants.toolchainRootDirectory,
-                                SettingKey = Constants.pathSettingKey,
+                                RelativePath = CrossCompileConstants.toolchainRootDirectory,
+                                SettingKey = CrossCompileConstants.pathSettingKey,
                             }
                         ]
                     }

@@ -1,4 +1,5 @@
 using System.Text;
+using System.Text.Json.Nodes;
 using Avalonia.Xaml.Interactions.Custom;
 using DynamicData;
 using OneWare.Essentials.Enums;
@@ -7,6 +8,7 @@ using OneWare.Essentials.Models;
 using OneWare.Essentials.Services;
 using FEntwumS.CrossCompiler.Assistents;
 using FEntwumS.CrossCompiler.ViewModel;
+using OneWare.UniversalFpgaProjectSystem.Models;
 using Prism.Ioc;
 
 namespace FEntwumS.CrossCompiler.Services;
@@ -15,11 +17,17 @@ public class ToolchainService : IToolchainService
 {
     //Attribute
     public string workingDirectory=String.Empty;
+    public string mainSourcesPath=String.Empty;
     public string mainSourcesName=String.Empty;
     public ICommandService commandService;
     public ILoggingService loggingService;
-    public List<object> toolchains;
+    public IProjectExplorerService projExplorerService;
     public bool debugCheck;
+    public List<string> includePaths;
+    public List<string> compileSources;
+    public List<string> objectFiles;
+    public string toolchain;
+    public string linkerSkript;
    
 
     //Constructor
@@ -27,43 +35,81 @@ public class ToolchainService : IToolchainService
     {
         commandService= TransferredContainerProvider.getService<ICommandService>();
         loggingService = TransferredContainerProvider.getService<ILoggingService>();
-        toolchains = new List<object>();
-        if(!toolchains.Contains("NeoRV32"))toolchains.Add("NeoRV32");
-    }
-
-    
-    //Helper-Method
-    public List<object> returnAvailableToolchains() {
-        return toolchains;
+        projExplorerService = TransferredContainerProvider.getService<IProjectExplorerService>();
+        compileSources = new List<string>();
+        includePaths = new List<string>();
+        objectFiles = new List<string>();
     }
 
     public void setDebugCheck(bool value)
     {
         debugCheck = value;
     }
+
     public void setWorkingInformation(IProjectFile sourceFile)
     {
-        workingDirectory = Path.Combine(sourceFile.Root!.FullPath, "build","compile");
+        JsonArray tempJsonArray = (projExplorerService.ActiveProject.Root as UniversalFpgaProjectRoot)
+            .Properties["SourceFiles"].AsArray();
+        toolchain = (projExplorerService.ActiveProject.Root as UniversalFpgaProjectRoot)
+            .Properties["TargetSystem"].ToString();
+        linkerSkript = (projExplorerService.ActiveProject.Root as UniversalFpgaProjectRoot)
+            .Properties["LinkerSkript"].ToString();
+        workingDirectory = Path.Combine(sourceFile.Root!.FullPath, "build", "compile");
         if (!Directory.Exists(workingDirectory))
         {
             Directory.CreateDirectory(workingDirectory);
         }
-        mainSourcesName = sourceFile.FullPath;
+
+        mainSourcesPath = (projExplorerService.ActiveProject.Root as UniversalFpgaProjectRoot)
+            .Properties["MainFile"].ToString();;
+        mainSourcesName = Path.GetFileName(mainSourcesPath);
+        mainSourcesName = mainSourcesName.Remove(mainSourcesName.LastIndexOf('.'));
+        string checkExtension;
+        if (tempJsonArray.Count > 0)
+        {
+            compileSources.Clear();
+            compileSources.Add(mainSourcesPath);
+            foreach (var element in tempJsonArray)
+            {
+                checkExtension = element.ToString().Substring(element.ToString().LastIndexOf('.') + 1);
+                switch (checkExtension)
+                {
+                    case "c":
+                        if(!compileSources.Contains(element.ToString()))compileSources.Add(element.ToString());
+                        break;
+                    case "cpp":
+                        if(!compileSources.Contains(element.ToString()))compileSources.Add(element.ToString());
+                        break;
+                    case "s":
+                        if(!compileSources.Contains(element.ToString()))compileSources.Add(element.ToString());
+                        break;
+                    case "S":
+                        if(!compileSources.Contains(element.ToString()))compileSources.Add(element.ToString());
+                        break;
+                    default:
+                        break;
+                }
+            }
+            tempJsonArray = (projExplorerService.ActiveProject.Root as UniversalFpgaProjectRoot)
+                .Properties["IncludePaths"].AsArray();
+            if (tempJsonArray.Count > 0)
+            {
+                includePaths.Clear();
+                foreach (var path in tempJsonArray)includePaths.Add(path.ToString());
+            }
+        }
+           
+        
     }
     
     //Method for performing the CrossCompiler-Toolchain
     public async Task<bool> performCrossCompilerToolchain(string chosenToolchainId)
     {
         bool check = false;
-        
-        switch (chosenToolchainId)
+        switch (toolchain)
         {
             case "NeoRV32":
-                check = await doObjectFilesFromStartUpAssembly();
-                if (!check) return check;
-                check = await doObjectFilesFromMainSources();
-                if (!check) return check;
-                check = await doObjectFilesFromDriverSources();
+                check = await doObjectFilesFromSources();
                 if (!check) return check;
                 check = await doELFFileFromObjectFiles();
                 if (!check) return check;
@@ -89,97 +135,93 @@ public class ToolchainService : IToolchainService
     
 
     //Methods for first Step of Toolchain: Generating the Object files /////////////////////////////////////////////////
-    private async Task<bool> doObjectFilesFromMainSources()
+
+    private async Task<bool> doObjectFilesFromSources()
     {
-        //Locals
-        string driverLibPath = string.Empty;
-        string sourceName = mainSourcesName;
-        string outputName = "main.c.o";
+        if (compileSources.Count.Equals(0))
+        {
+            loggingService.Error("[CrossCompiler] compile source list is empty.");
+            return false;
+        }
+        string fileName;
+        string outputName;
+        string[] directoryFiles;
+        string wildcardExtension;
         bool success = false;
-        
-        //Declaration
-        driverLibPath = Path.Combine(workingDirectory, "lib", "include");
-        
-        //Process
-        success = await translateSourcesToObjectFiles(driverLibPath, sourceName, outputName);
-        
-        //Output
-        return success;
-    }
-    
-    private async Task<bool> doObjectFilesFromStartUpAssembly()
-    {
-        //Locals
-        string driverLibPath = string.Empty;
-        string sourceName = @"C:\Users\morit\OneWareStudio\Projects\testCompile\build\compile\crt0.S";
-        string outputName = "startUp.S.o";
-        bool success = false;
-        
-        //Declaration
-        driverLibPath = Path.Combine(workingDirectory, "lib", "include");
-        
-        //Process
-        success = await translateSourcesToObjectFiles(driverLibPath, sourceName, outputName);
-        
-        //Output
-        return success;
-    }
-    
-    private async Task<bool> doObjectFilesFromDriverSources()
-    {
-        //Locals
-        string driverLibPath = string.Empty;
-        string sourceName = @"C:\Users\morit\OneWareStudio\Projects\testCompile\build\compile\lib\source\iceduino_led.c";
-        string outputName = "iceduino_led.c.o";
-        bool success = false;
-        
-        //Declaration
-        driverLibPath = Path.Combine(workingDirectory, "lib", "include");
-        
-        //Process
-        success = await translateSourcesToObjectFiles(driverLibPath, sourceName, outputName);
-        
-        //Output
+        objectFiles.Clear();
+        foreach (var sourceFile in compileSources)
+        {
+            if (sourceFile.Contains("*"))
+            {
+                directoryFiles = Directory.GetFiles(sourceFile.Remove(sourceFile.IndexOf('*') - 1));
+                wildcardExtension = Path.GetExtension(sourceFile); 
+             foreach (var directoryFile in directoryFiles)
+             {
+                 if (Path.GetExtension(directoryFile).Equals(wildcardExtension))
+                 {
+                     fileName = Path.GetFileName(directoryFile);
+                     outputName = $"{fileName}.o";
+                     outputName = Path.Combine(workingDirectory, outputName);
+                     objectFiles.Add(outputName);
+                     success = await translateSourceToObjectFile(includePaths.ToArray(), directoryFile, outputName);
+                     if (!success)
+                     {
+                         loggingService.Error("[CrossCompiler] compiling failed. Please try again.");
+                         return success;
+                     }  
+                 }
+             }
+            }
+            else
+            {
+                fileName = Path.GetFileName(sourceFile);
+                outputName = $"{fileName}.o";
+                outputName = Path.Combine(workingDirectory, outputName);
+                objectFiles.Add(outputName);
+                success = await translateSourceToObjectFile(includePaths.ToArray(), sourceFile, outputName);
+                if (!success)
+                {
+                    loggingService.Error("[CrossCompiler] compiling failed. Please try again.");
+                    return success;
+                }   
+            }    
+        }
         return success;
     }
 
-    private async Task<bool> translateSourcesToObjectFiles(string driverLibPath, string sourceName, string outputName)
+    private async Task<bool> translateSourceToObjectFile(string [] includePaths, string sourceFile, string outputFile)
     {
         //Locals
         string gccToolPath = string.Empty;
         List<string> gccArgs = new List<string>();
-        string coreLibPath = string.Empty;
-        string outputPath = string.Empty;
         bool success = false;
         string stdout = string.Empty;
         string stderr = string.Empty;
 
         //Path declaration
-        coreLibPath = Path.Combine(workingDirectory, "include");
-        outputPath = Path.Combine(workingDirectory, outputName);
-        gccToolPath = commandService.getToolPath(Constants.gnuCrossCompiler);
+        gccToolPath = commandService.getToolPath(CrossCompileConstants.gnuCrossCompiler);
 
         //Argument declaration
-        gccArgs.Add(Constants.optCompile);
-        gccArgs.Add(Constants.machineArchitecture);
-        gccArgs.Add(Constants.applicationBinaryInterface);
-        gccArgs.Add(Constants.optOptimize);
-        string[] options = Constants.optionsDefault.Split(' ');
+        gccArgs.Add(CrossCompileConstants.optCompile);
+        gccArgs.Add(CrossCompileConstants.machineArchitecture);
+        gccArgs.Add(CrossCompileConstants.applicationBinaryInterface);
+        gccArgs.Add(CrossCompileConstants.optOptimize);
+        string[] options = CrossCompileConstants.optionsDefault.Split(' ');
         foreach (string option in options) gccArgs.Add(option);
-        if(debugCheck)gccArgs.Add(Constants.optDebug);
-        gccArgs.Add(Constants.optInclude);
-        gccArgs.Add(coreLibPath);
-        gccArgs.Add(Constants.optInclude);
-        gccArgs.Add(driverLibPath);
-        gccArgs.Add(sourceName);
-        gccArgs.Add(Constants.optOutput);
-        gccArgs.Add(outputPath);
+        if(debugCheck)gccArgs.Add(CrossCompileConstants.optDebug);
+        foreach (string include in includePaths)
+        {
+            gccArgs.Add(CrossCompileConstants.optInclude);
+            gccArgs.Add(include);
+        }
+        gccArgs.Add(sourceFile);
+        gccArgs.Add(CrossCompileConstants.optOutput);
+        gccArgs.Add(outputFile);
         
         //Process
         (success, stdout, stderr) = await commandService.ExecuteCommandAsync(gccToolPath, gccArgs, workingDirectory);
 
         //Output
-        
         return success;
     }
     
@@ -189,31 +231,25 @@ public class ToolchainService : IToolchainService
         //Locals
         
         List<string> gccArgs = new List<string>();
-        string [] objectFiles= new string[3];
-        string gccToolPath = commandService.getToolPath(Constants.gnuCrossCompiler);
-        string linkerScript = Path.Combine(workingDirectory, "neorv32.ld");
-        string outputPath =  Path.Combine(workingDirectory, "main.elf");
+        string gccToolPath = commandService.getToolPath(CrossCompileConstants.gnuCrossCompiler);
+        string outputPath =  Path.Combine(workingDirectory, $"{mainSourcesName}.elf");
         bool success = false;
         string stdout = string.Empty;
         string stderr = string.Empty;
         
         //Declaration
-        objectFiles[0] = Path.Combine(workingDirectory, "startUp.S.o");
-        objectFiles[1] = Path.Combine(workingDirectory, "main.c.o");
-        objectFiles[2] = Path.Combine(workingDirectory, "iceduino_led.c.o");
-        
-        gccArgs.Add(Constants.machineArchitecture);
-        gccArgs.Add(Constants.applicationBinaryInterface);
-        gccArgs.Add(Constants.optOptimize);
-        string[] options = Constants.optionsDefault.Split(' ');
+        gccArgs.Add(CrossCompileConstants.machineArchitecture);
+        gccArgs.Add(CrossCompileConstants.applicationBinaryInterface);
+        gccArgs.Add(CrossCompileConstants.optOptimize);
+        string[] options = CrossCompileConstants.optionsDefault.Split(' ');
         foreach (string option in options) gccArgs.Add(option);
-        if(debugCheck)gccArgs.Add(Constants.optDebug);
-        gccArgs.Add(Constants.optUseLinkScript);
-        gccArgs.Add(linkerScript);
+        if(debugCheck)gccArgs.Add(CrossCompileConstants.optDebug);
+        gccArgs.Add(CrossCompileConstants.optUseLinkScript);
+        gccArgs.Add(linkerSkript);
         foreach (var objectPath in objectFiles) gccArgs.Add(objectPath);
-        gccArgs.Add(Constants.optOutput);
+        gccArgs.Add(CrossCompileConstants.optOutput);
         gccArgs.Add(outputPath);
-        gccArgs.Add(Constants.optNoCLibary);
+        gccArgs.Add(CrossCompileConstants.optNoCLibary);
         
         //Processing 
         (success, stdout, stderr) = await commandService.ExecuteCommandAsync(gccToolPath, gccArgs, workingDirectory);
@@ -227,17 +263,17 @@ public class ToolchainService : IToolchainService
     {
         //Locals
         List<string> objDumpArgs = new List<string>();
-        string objDumpToolPath = commandService.getToolPath(Constants.objectDump);
-        string sourcePath =  Path.Combine(workingDirectory, "main.elf");
-        string outputPath = Path.Combine(workingDirectory,"main.asm");
+        string objDumpToolPath = commandService.getToolPath(CrossCompileConstants.objectDump);
+        string sourcePath =  Path.Combine(workingDirectory, $"{mainSourcesName}.elf");
+        string outputPath = Path.Combine(workingDirectory,$"{mainSourcesName}.asm");
         bool success = false;
         string stdout = string.Empty;
         string stderr = string.Empty;
         
         //Declaration
-        objDumpArgs.Add(Constants.optDisassembler);
-        objDumpArgs.Add(Constants.optWithSourceCode);
-        objDumpArgs.Add(Constants.optZeroTerminate);
+        objDumpArgs.Add(CrossCompileConstants.optDisassembler);
+        objDumpArgs.Add(CrossCompileConstants.optWithSourceCode);
+        objDumpArgs.Add(CrossCompileConstants.optZeroTerminate);
         objDumpArgs.Add(sourcePath);
         
         //Processing 
@@ -266,34 +302,33 @@ public class ToolchainService : IToolchainService
         
 
         //Process
-        check = await translateELFToBinary(Constants.elfComponents[0], textPath);
+        check = await translateELFToBinary(CrossCompileConstants.elfComponents[0], textPath);
         if (!check) return check;
-        check = await translateELFToBinary(Constants.elfComponents[1], rodataPath);
+        check = await translateELFToBinary(CrossCompileConstants.elfComponents[1], rodataPath);
         if (!check) return check;
-        check = await translateELFToBinary(Constants.elfComponents[2], dataPath);
+        check = await translateELFToBinary(CrossCompileConstants.elfComponents[2], dataPath);
         if(check) concatToMainBinary(inputFiles);
-        return check;
-        
+        return check;   
     }
 
     private async Task<bool> translateELFToBinary(string elfComponent, string output)
     {
         //Locals
         List<string> objCopyArgs = new List<string>();
-        string objCopyToolPath = commandService.getToolPath(Constants.objectCopy);
-        string sourcePath =  Path.Combine(workingDirectory, "main.elf");
+        string objCopyToolPath = commandService.getToolPath(CrossCompileConstants.objectCopy);
+        string sourcePath =  Path.Combine(workingDirectory, $"{mainSourcesName}.elf");
         bool success = false;
         string stdout = string.Empty;
         string stderr = string.Empty;
         
         //Declaration
-        objCopyArgs.Add(Constants.optInclude);
-        objCopyArgs.Add(Constants.elfFormat);
+        objCopyArgs.Add(CrossCompileConstants.optInclude);
+        objCopyArgs.Add(CrossCompileConstants.elfFormat);
         objCopyArgs.Add(sourcePath);
-        objCopyArgs.Add(Constants.optJoin);
+        objCopyArgs.Add(CrossCompileConstants.optJoin);
         objCopyArgs.Add(elfComponent);
-        objCopyArgs.Add(Constants.optOutTarget);
-        objCopyArgs.Add(Constants.optFormat);
+        objCopyArgs.Add(CrossCompileConstants.optOutTarget);
+        objCopyArgs.Add(CrossCompileConstants.optFormat);
         objCopyArgs.Add(output);
         
         //Process
@@ -308,7 +343,7 @@ public class ToolchainService : IToolchainService
         //Locals
         FileStream outputStream;
         FileStream inputStream;
-        string outputFile = Path.Combine(workingDirectory, "main.bin");
+        string outputFile = Path.Combine(workingDirectory, $"{mainSourcesName}.bin");
 
         // Process
         using (outputStream = new FileStream(outputFile, FileMode.Create, FileAccess.Write))
@@ -328,15 +363,15 @@ public class ToolchainService : IToolchainService
     {
         //Locals
         List<string> imageGenArgs = new List<string>();
-        string imageToolPath = Constants.imageToolPath;
-        string sourcePath = Path.Combine(workingDirectory, "main.bin");
+        string imageToolPath = CrossCompileConstants.imageToolPath;
+        string sourcePath = Path.Combine(workingDirectory, $"{mainSourcesName}.bin");
         string outputPath = Path.Combine(workingDirectory, "neorv32_exe.bin"); 
         bool success = false;
         string stdout = string.Empty;
         string stderr = string.Empty;
         
         //Declaration
-        imageGenArgs.Add(Constants.appBinaryImg);
+        imageGenArgs.Add(CrossCompileConstants.appBinaryImg);
         imageGenArgs.Add(sourcePath);
         imageGenArgs.Add(outputPath);
         
@@ -351,15 +386,15 @@ public class ToolchainService : IToolchainService
     {
         //Locals
         List<string> imageGenArgs = new List<string>();
-        string imageToolPath = Constants.imageToolPath;
-        string sourcePath = Path.Combine(workingDirectory, "main.bin");
+        string imageToolPath = CrossCompileConstants.imageToolPath;
+        string sourcePath = Path.Combine(workingDirectory, $"{mainSourcesName}.bin");
         string outputPath = Path.Combine(workingDirectory, "neorv32_application_image.vhd"); 
         bool success = false;
         string stdout = string.Empty;
         string stderr = string.Empty;
         
         //Declaration
-        imageGenArgs.Add(Constants.appVhdImg);
+        imageGenArgs.Add(CrossCompileConstants.appVhdImg);
         imageGenArgs.Add(sourcePath);
         imageGenArgs.Add(outputPath);
         
@@ -374,15 +409,15 @@ public class ToolchainService : IToolchainService
     {
         //Locals
         List<string> imageGenArgs = new List<string>();
-        string imageToolPath = Constants.imageToolPath;
-        string sourcePath = Path.Combine(workingDirectory, "main.bin");
+        string imageToolPath = CrossCompileConstants.imageToolPath;
+        string sourcePath = Path.Combine(workingDirectory, $"{mainSourcesName}.bin");
         string outputPath = Path.Combine(workingDirectory, "neorv32_exe.hex"); 
         bool success = false;
         string stdout = string.Empty;
         string stderr = string.Empty;
         
         //Declaration
-        imageGenArgs.Add(Constants.appHexImg);
+        imageGenArgs.Add(CrossCompileConstants.appHexImg);
         imageGenArgs.Add(sourcePath);
         imageGenArgs.Add(outputPath);
         
@@ -397,16 +432,17 @@ public class ToolchainService : IToolchainService
     public void cleanup()
     {
         //Locals
-        List<string> cleanUpArgs = new List<string>();
-        string[] tempFiles = { "text.bin", "rodata.bin", "data.bin", "startUp.S.o", "iceduino_led.c.o", "main.c.o" }; 
+        List<string> tempFiles = new List<string>();
+        tempFiles.Add("text.bin");
+        tempFiles.Add("rodata.bin");
+        tempFiles.Add("data.bin");
+         
         bool success = false;
         string stdout = string.Empty;
         string stderr = string.Empty;
 
         //Process
         foreach (string tempFile in tempFiles) File.Delete(Path.Combine(workingDirectory, tempFile));
-    }
-
-    
-    
+        foreach (string objectFile in objectFiles)File.Delete(Path.Combine(workingDirectory, objectFile));
+    }   
 }
