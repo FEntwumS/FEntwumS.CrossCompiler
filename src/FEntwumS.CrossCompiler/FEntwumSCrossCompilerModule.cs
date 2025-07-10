@@ -37,7 +37,7 @@ public class FEntwumSCrossCompilerModule : IModule
     {
         addPackageBinaries(containerProvider);
         editGlobalSettings(containerProvider);
-        //editProjectSettings(containerProvider);
+        editProjectSettings(containerProvider);
         registerCrossCompileExtension(containerProvider);
         transferContainerProvider(containerProvider);
         
@@ -96,8 +96,7 @@ public class FEntwumSCrossCompilerModule : IModule
             projectRoot =>
             {
                 return activationCheckOfCrossCompileSettings(projectRoot);
-            });
-        
+            });     
     }
 
     public bool activationCheckOfCrossCompileSettings(IProjectRootWithFile projectRoot)

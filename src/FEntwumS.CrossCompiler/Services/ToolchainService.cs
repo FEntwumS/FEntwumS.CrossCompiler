@@ -28,6 +28,7 @@ public class ToolchainService : IToolchainService
     public List<string> objectFiles;
     public string toolchain;
     public string linkerSkript;
+    public string outputDirectory;
    
 
     //Constructor
@@ -54,6 +55,8 @@ public class ToolchainService : IToolchainService
             .Properties["TargetSystem"].ToString();
         linkerSkript = (projExplorerService.ActiveProject.Root as UniversalFpgaProjectRoot)
             .Properties["LinkerSkript"].ToString();
+        outputDirectory = (projExplorerService.ActiveProject.Root as UniversalFpgaProjectRoot)
+            .Properties["OutputPath"].ToString();
         workingDirectory = Path.Combine(sourceFile.Root!.FullPath, "build", "compile");
         if (!Directory.Exists(workingDirectory))
         {
@@ -232,7 +235,7 @@ public class ToolchainService : IToolchainService
         
         List<string> gccArgs = new List<string>();
         string gccToolPath = commandService.getToolPath(CrossCompileConstants.gnuCrossCompiler);
-        string outputPath =  Path.Combine(workingDirectory, $"{mainSourcesName}.elf");
+        string outputPath =  Path.Combine(outputDirectory, $"{mainSourcesName}.elf");
         bool success = false;
         string stdout = string.Empty;
         string stderr = string.Empty;
@@ -264,8 +267,8 @@ public class ToolchainService : IToolchainService
         //Locals
         List<string> objDumpArgs = new List<string>();
         string objDumpToolPath = commandService.getToolPath(CrossCompileConstants.objectDump);
-        string sourcePath =  Path.Combine(workingDirectory, $"{mainSourcesName}.elf");
-        string outputPath = Path.Combine(workingDirectory,$"{mainSourcesName}.asm");
+        string sourcePath =  Path.Combine(outputDirectory, $"{mainSourcesName}.elf");
+        string outputPath = Path.Combine(outputDirectory,$"{mainSourcesName}.asm");
         bool success = false;
         string stdout = string.Empty;
         string stderr = string.Empty;
@@ -316,7 +319,7 @@ public class ToolchainService : IToolchainService
         //Locals
         List<string> objCopyArgs = new List<string>();
         string objCopyToolPath = commandService.getToolPath(CrossCompileConstants.objectCopy);
-        string sourcePath =  Path.Combine(workingDirectory, $"{mainSourcesName}.elf");
+        string sourcePath =  Path.Combine(outputDirectory, $"{mainSourcesName}.elf");
         bool success = false;
         string stdout = string.Empty;
         string stderr = string.Empty;
@@ -343,7 +346,7 @@ public class ToolchainService : IToolchainService
         //Locals
         FileStream outputStream;
         FileStream inputStream;
-        string outputFile = Path.Combine(workingDirectory, $"{mainSourcesName}.bin");
+        string outputFile = Path.Combine(outputDirectory, $"{mainSourcesName}.bin");
 
         // Process
         using (outputStream = new FileStream(outputFile, FileMode.Create, FileAccess.Write))
@@ -364,8 +367,8 @@ public class ToolchainService : IToolchainService
         //Locals
         List<string> imageGenArgs = new List<string>();
         string imageToolPath = CrossCompileConstants.imageToolPath;
-        string sourcePath = Path.Combine(workingDirectory, $"{mainSourcesName}.bin");
-        string outputPath = Path.Combine(workingDirectory, "neorv32_exe.bin"); 
+        string sourcePath = Path.Combine(outputDirectory, $"{mainSourcesName}.bin");
+        string outputPath = Path.Combine(outputDirectory, "neorv32_exe.bin"); 
         bool success = false;
         string stdout = string.Empty;
         string stderr = string.Empty;
@@ -387,8 +390,8 @@ public class ToolchainService : IToolchainService
         //Locals
         List<string> imageGenArgs = new List<string>();
         string imageToolPath = CrossCompileConstants.imageToolPath;
-        string sourcePath = Path.Combine(workingDirectory, $"{mainSourcesName}.bin");
-        string outputPath = Path.Combine(workingDirectory, "neorv32_application_image.vhd"); 
+        string sourcePath = Path.Combine(outputDirectory, $"{mainSourcesName}.bin");
+        string outputPath = Path.Combine(outputDirectory, "neorv32_application_image.vhd"); 
         bool success = false;
         string stdout = string.Empty;
         string stderr = string.Empty;
@@ -410,8 +413,8 @@ public class ToolchainService : IToolchainService
         //Locals
         List<string> imageGenArgs = new List<string>();
         string imageToolPath = CrossCompileConstants.imageToolPath;
-        string sourcePath = Path.Combine(workingDirectory, $"{mainSourcesName}.bin");
-        string outputPath = Path.Combine(workingDirectory, "neorv32_exe.hex"); 
+        string sourcePath = Path.Combine(outputDirectory, $"{mainSourcesName}.bin");
+        string outputPath = Path.Combine(outputDirectory, "neorv32_exe.hex"); 
         bool success = false;
         string stdout = string.Empty;
         string stderr = string.Empty;
